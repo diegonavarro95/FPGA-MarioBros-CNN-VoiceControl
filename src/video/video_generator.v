@@ -16,7 +16,7 @@ module video_generator(
 );
 
     // Parámetros de la pantalla para el patrón
-    parameter H_ACTIVE = 1280;
+    parameter H_ACTIVE = 640;
     localparam BAR_WIDTH = H_ACTIVE / 8; // 1280 / 8 = 160 píxeles por barra
 
     // Colores predefinidos (24 bits)

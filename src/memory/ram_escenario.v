@@ -125,14 +125,20 @@ module ram_escenario (
     // -------------------------------------------------------------------------
     // LÓGICA SÍNCRONA DE LECTURA DE MEMORIA
     // -------------------------------------------------------------------------
-    wire [8:0] col_abs = scroll_offset + screen_tile_x;
+    // ELIMINE esta línea (era combinacional y glitchy):
+    // wire [8:0] col_abs = scroll_offset + screen_tile_x;
     reg  [7:0] tid;
 
+    // REEMPLAZAR el bloque always por esto:
+    reg [8:0] col_abs_reg;
+
     always @(posedge clk) begin
-        if (col_abs >= MAP_WIDTH || screen_tile_y >= MAP_HEIGHT) begin
-            tid <= E; // Fuera de rango -> Pintar el Cielo
+        col_abs_reg = scroll_offset + screen_tile_x;   // se calcula y usa en el MISMO flanco
+
+        if (col_abs_reg >= MAP_WIDTH || screen_tile_y >= MAP_HEIGHT) begin
+            tid <= E;
         end else begin
-            tid <= LEVEL_MAP[screen_tile_y][col_abs];
+            tid <= LEVEL_MAP[screen_tile_y][col_abs_reg];
         end
     end
 
