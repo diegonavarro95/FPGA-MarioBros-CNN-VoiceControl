@@ -1,3 +1,4 @@
+`timescale 1ns / 1ps
 // RAM_ESCENARIO.V
 // Módulo de mapa del nivel para Super Mario Bros - Nivel 1-1
 module ram_escenario (
@@ -155,3 +156,4 @@ module ram_escenario (
     end
 
 endmodule
+

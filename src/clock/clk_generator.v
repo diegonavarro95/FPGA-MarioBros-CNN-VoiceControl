@@ -28,3 +28,4 @@ module clk_generator(
     BUFG buf2 (.I(clk_12_unbuf), .O(clk_12MHz));
     BUFG buf3 (.I(clk_5x_unbuf), .O(pixel_clk_5x));
 endmodule
+

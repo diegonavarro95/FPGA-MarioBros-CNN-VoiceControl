@@ -1,3 +1,4 @@
+`timescale 1ns / 1ps
 module controlador_escritura (
     input  wire       clk,
     input  wire       rst,
@@ -41,3 +42,4 @@ module controlador_escritura (
     end
 
 endmodule
+

@@ -1,3 +1,5 @@
+`timescale 1ns / 1ps
+
 module generador_random (
     input  wire       CLK,
     input  wire       RST,
@@ -51,3 +53,4 @@ module generador_random (
     end
 
 endmodule
+

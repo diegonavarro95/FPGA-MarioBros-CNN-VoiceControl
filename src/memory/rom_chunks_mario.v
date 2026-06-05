@@ -1,3 +1,4 @@
+`timescale 1ns / 1ps
 // ROM de Chunks OPTIMIZADA - Super Mario Bros FPGA
 // Checar los readmes para explicación
 // NOTA: Los loops en el bloque initial:
@@ -274,3 +275,4 @@ module rom_chunks_mario (
     end
 
 endmodule
+

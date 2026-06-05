@@ -3,14 +3,18 @@
 module Ctop (
     input  wire       CLK,
     input  wire       RST,
-    output wire [2:0] RAM_DATA_OUT // Para ver la salida
+    output wire [2:0] RAM_DATA_OUT, 
+    output wire [3:0] out_x,        // NUEVO: Para que C++ sepa la coordenada X
+    output wire [3:0] out_y         // NUEVO: Para que C++ sepa la coordenada Y
 );
 
     // Señales de interconexión
     wire [7:0] chunk_id;
     wire [3:0] p_x;
     wire [3:0] p_y;
+    /* verilator lint_off UNUSEDSIGNAL */
     wire [3:0] p_data;
+    /* verilator lint_on UNUSEDSIGNAL */
     reg  [2:0] p_data_reg;
     wire       ram_we;
     wire       sig_next;
@@ -30,7 +34,7 @@ module Ctop (
     generador_random GEN (
         .CLK(CLK),
         .RST(RST),
-        .EN(sig_next),  // Ahora sí existe este puerto en el módulo Verilog
+        .EN(sig_next),  
         .CHUNK_ID(chunk_id)
     );
 
@@ -60,4 +64,9 @@ module Ctop (
         .data_out(RAM_DATA_OUT)
     );
 
+    // Asignamos las señales internas a las salidas para el simulador C++
+    assign out_x = p_x;
+    assign out_y = p_y;
+
 endmodule
+

@@ -1,3 +1,5 @@
+`timescale 1ns / 1ps
+
 module ram_ventana (
     input  wire       clk,
     input  wire       we,
@@ -28,3 +30,4 @@ module ram_ventana (
     end
 
 endmodule
+

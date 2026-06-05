@@ -1,0 +1,22 @@
+# C++ y Simulador Verilator
+obj_dir/
+*.o
+*.d
+*.mk
+*.exe
+*.out
+
+# Archivos temporales de Xilinx Vivado
+*.jou
+*.log
+*.str
+*.pb
+*.wdb
+*.dir/
+.Xil/
+vivado*.backup.*
+
+# Archivos de Sistema Operativo (Ubuntu/Linux/Mac)
+.DS_Store
+*~
+*.swp

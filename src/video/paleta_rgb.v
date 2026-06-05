@@ -1,38 +1,40 @@
+`timescale 1ns / 1ps
 // =============================================================================
 // PALETA_RGB.V
-// Convierte el índice de color de 4 bits de los chunks a RGB de 24 bits
-//
-// Los 16 colores están basados en la paleta NES aproximada para Mario Bros.
-// El color 0 (transparente) se mapea al azul cielo del fondo.
-//
+// Convierte el índice de color de 4 bits de los chunks a RGB de 12 bits (Pmod VGA)
+// Aun se discute si usar VGA o HDMI
 // LATENCIA: combinacional puro (0 ciclos) - sin registros
 // =============================================================================
 
 module paleta_rgb (
-    input  wire [3:0]  color_index,  // Color de 4 bits de rom_chunks_mario
-    output reg  [23:0] rgb_out       // RGB 24 bits: [23:16]=R, [15:8]=G, [7:0]=B
+    input  wire [3:0] color_index,  // Color de 4 bits de rom_chunks_mario
+    output reg  [3:0] vga_r,        // 4 bits canal Rojo
+    output reg  [3:0] vga_g,        // 4 bits canal Verde
+    output reg  [3:0] vga_b         // 4 bits canal Azul
 );
 
     always @(*) begin
         case (color_index)
-            4'h0: rgb_out = 24'h5C94FC; // Azul cielo  (transparente → fondo)
-            4'h1: rgb_out = 24'h000000; // Negro
-            4'h2: rgb_out = 24'hBCBCBC; // Gris claro
-            4'h3: rgb_out = 24'h008800; // Verde oscuro  (tuberías borde)
-            4'h4: rgb_out = 24'h00D800; // Verde claro   (tuberías interior)
-            4'h5: rgb_out = 24'h7C4C00; // Café oscuro
-            4'h6: rgb_out = 24'hC49C00; // Café claro    (suelo)
-            4'h7: rgb_out = 24'hFCA044; // Beige/Piel    (Mario cara/manos)
-            4'h8: rgb_out = 24'h444444; // Gris oscuro   (bordes bloques)
-            4'h9: rgb_out = 24'h7C5800; // Café/Marrón   (Goomba, ladrillos)
-            4'hA: rgb_out = 24'h00A8E4; // Azul claro
-            4'hB: rgb_out = 24'hE87000; // Naranja/Dorado oscuro (bloque ?)
-            4'hC: rgb_out = 24'hE40058; // Rojo          (Mario cuerpo)
-            4'hD: rgb_out = 24'hF878F8; // Rosa
-            4'hE: rgb_out = 24'hFCE840; // Amarillo/Dorado brillante (monedas)
-            4'hF: rgb_out = 24'hFCFCFC; // Blanco        (nubes, signo ?)
-            default: rgb_out = 24'hFF00FF; // Magenta (error, no debería ocurrir)
+            // FORMATO 12'hRGB extraído de tu paleta NES original de 24 bits
+            4'h0: {vga_r, vga_g, vga_b} = 12'h59F; // Azul cielo (5C, 94, FC)
+            4'h1: {vga_r, vga_g, vga_b} = 12'h000; // Negro      (00, 00, 00)
+            4'h2: {vga_r, vga_g, vga_b} = 12'hBBB; // Gris claro (BC, BC, BC)
+            4'h3: {vga_r, vga_g, vga_b} = 12'h080; // Verde osc. (00, 88, 00)
+            4'h4: {vga_r, vga_g, vga_b} = 12'h0D0; // Verde cla. (00, D8, 00)
+            4'h5: {vga_r, vga_g, vga_b} = 12'h740; // Café osc.  (7C, 4C, 00)
+            4'h6: {vga_r, vga_g, vga_b} = 12'hC90; // Café cla.  (C4, 9C, 00)
+            4'h7: {vga_r, vga_g, vga_b} = 12'hFA4; // Piel       (FC, A0, 44)
+            4'h8: {vga_r, vga_g, vga_b} = 12'h444; // Gris osc.  (44, 44, 44)
+            4'h9: {vga_r, vga_g, vga_b} = 12'h750; // Marrón     (7C, 58, 00)
+            4'hA: {vga_r, vga_g, vga_b} = 12'h0AE; // Azul claro (00, A8, E4)
+            4'hB: {vga_r, vga_g, vga_b} = 12'hE70; // Naranja    (E8, 70, 00)
+            4'hC: {vga_r, vga_g, vga_b} = 12'hE05; // Rojo Mario (E4, 00, 58)
+            4'hD: {vga_r, vga_g, vga_b} = 12'hF7F; // Rosa       (F8, 78, F8)
+            4'hE: {vga_r, vga_g, vga_b} = 12'hFE4; // Amarillo   (FC, E8, 40)
+            4'hF: {vga_r, vga_g, vga_b} = 12'hFFF; // Blanco     (FC, FC, FC)
+            default: {vga_r, vga_g, vga_b} = 12'hF0F; // Magenta de error
         endcase
     end
 
 endmodule
+
