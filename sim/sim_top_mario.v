@@ -34,7 +34,7 @@ module sim_top_mario (
     reg vsync_prev;
     reg [2:0] frame_counter;
 
-    always @(posedge clk_25mhz) begin
+    always @(posedge clk_25mhz or posedge reset) begin
         if (reset) begin
             scroll_offset <= 8'd0;
             frame_counter <= 0;
@@ -58,8 +58,14 @@ module sim_top_mario (
     // 3. Extracción de Coordenadas (Usando el FIX de 5 bits para 32x32)
     wire [4:0] tile_x = pixel_x[9:5];
     wire [3:0] tile_y = pixel_y[8:5];
-    wire [4:0] chunk_pixel_x = pixel_x[4:0]; // <-- FIX APLICADO
-    wire [4:0] chunk_pixel_y = pixel_y[4:0]; // <-- FIX APLICADO
+    // FIX: Retraso de 1 ciclo para sincronizar con la latencia de ram_escenario
+    reg [4:0] chunk_pixel_x_delay;
+    reg [4:0] chunk_pixel_y_delay;
+
+    always @(posedge clk_25mhz) begin // En el top físico, cambiar por posedge pclk
+        chunk_pixel_x_delay <= pixel_x[4:0];
+        chunk_pixel_y_delay <= pixel_y[4:0];
+    end
 
     // 4. Memoria RAM y ROM
     wire [7:0] chunk_id;
@@ -79,8 +85,8 @@ module sim_top_mario (
     rom_chunks_mario rom_sprites (
         .clk(clk_25mhz),
         .chunk_id(chunk_id),
-        .pixel_x(chunk_pixel_x),
-        .pixel_y(chunk_pixel_y),
+        .pixel_x(chunk_pixel_x_delay),
+        .pixel_y(chunk_pixel_y_delay),
         .pixel_data(pixel_color_index)
     );
 

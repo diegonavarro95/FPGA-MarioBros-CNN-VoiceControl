@@ -102,26 +102,14 @@ module rom_chunks_mario (
                     else
                         ROM[2][addr] = 4'hE;
                 end
-
-                // =============================================================
-                // ID 3: SUELO (GROUND)
-                // Patrón de adoquines café
-                // =============================================================
-                begin
-                    if (y == 0 || y == 1)
-                        // Línea superior más oscura
-                        ROM[3][addr] = 4'h9;
-                    else if ((y < 9) && (x == 0 || x == 1 || x == 16 || x == 17))
-                        ROM[3][addr] = 4'h9;
-                    else if ((y >= 9 && y < 18) && (x == 8 || x == 9 || x == 24 || x == 25))
-                        ROM[3][addr] = 4'h9;
-                    else if ((y >= 18) && (x == 0 || x == 1 || x == 16 || x == 17))
-                        ROM[3][addr] = 4'h9;
-                    else if (y == 8 || y == 9 || y == 18 || y == 19)
-                        ROM[3][addr] = 4'h9;
-                    else
-                        ROM[3][addr] = 4'h6;
-                end
+                // ==========================================
+                // FIX SUELO (ID 3): Tu diseño restaurado en 32x32
+                // ==========================================
+                if (y == 0 || y == 1) ROM[3][addr] = 4'h9;
+                else if ((y < 16) && (x == 0 || x == 1 || x == 16 || x == 17)) ROM[3][addr] = 4'h9;
+                else if ((y >= 16) && (x == 8 || x == 9 || x == 24 || x == 25)) ROM[3][addr] = 4'h9;
+                else if (y == 14 || y == 15 || y == 30 || y == 31) ROM[3][addr] = 4'h9;
+                else ROM[3][addr] = 4'h6;
 
                 // =============================================================
                 // ID 4: ESCALERA (STAIR BLOCK)
@@ -136,18 +124,15 @@ module rom_chunks_mario (
                         ROM[4][addr] = 4'hB;
                 end
 
-                // =============================================================
-                // ID 5: CASTILLO
-                // Patrón de piedra oscura
-                // =============================================================
-                begin
-                    if ((x + y) % 6 < 2)
-                        ROM[5][addr] = 4'h1;
-                    else if ((x + y) % 6 < 3)
-                        ROM[5][addr] = 4'h8;
-                    else
-                        ROM[5][addr] = 4'h2;
-                end
+                // ==========================================
+                // CASTILLO Y COLINAS (Nuevos Chunks)
+                // ==========================================
+                // ID 5: CASTILLO BASE (CA) - Ladrillo Naranja
+                if (y == 0 || y == 1) ROM[5][addr] = 4'h1;
+                else if ((y < 16) && (x == 0 || x == 1 || x == 16 || x == 17)) ROM[5][addr] = 4'h1;
+                else if ((y >= 16) && (x == 8 || x == 9 || x == 24 || x == 25)) ROM[5][addr] = 4'h1;
+                else if (y == 14 || y == 15 || y == 30 || y == 31) ROM[5][addr] = 4'h1;
+                else ROM[5][addr] = 4'hB;
 
                 // =============================================================
                 // ID 6: LADRILLO USADO (BRICK USED)
@@ -171,86 +156,50 @@ module rom_chunks_mario (
                         ROM[7][addr] = 4'h8;
                 end
 
-                // =============================================================
-                // ID 8: ASTA DE BANDERA (FLAG POLE)
-                // Barra gris vertical centrada
-                // =============================================================
-                begin
-                    if (x >= 14 && x <= 17)
-                        ROM[8][addr] = 4'h2;
-                    else if (x >= 13 && x <= 18)
-                        ROM[8][addr] = 4'h8;
-                    else
-                        ROM[8][addr] = 4'h0;
-                end
+                // ==========================================
+                // FIX BANDERA Y ASTA
+                // ==========================================
+                // ID 8: ASTA (FP)
+                if (x >= 14 && x <= 17) ROM[8][addr] = 4'h4;
+                else ROM[8][addr] = 4'h0;
+                
+                // ==========================================
+                // FIX BANDERA: Anclaje correcto a la derecha
+                // ==========================================
+                // ID 9: BANDERA (FL)
+                if (y >= 4 && y <= 16 && x >= 12 && x <= 31) ROM[9][addr] = 4'h4; 
+                else ROM[9][addr] = 4'h0;
 
-                // =============================================================
-                // ID 9: BANDERA (FLAG)
-                // Triángulo verde en la parte superior
-                // =============================================================
-                begin
-                    if (y >= 2 && y <= 20) begin
-                        if (x >= 18 && x < (18 + (20 - y)))
-                            ROM[9][addr] = 4'h4;
-                        else
-                            ROM[9][addr] = 4'h0;
-                    end else
-                        ROM[9][addr] = 4'h0;
-                end
+                // ==========================================
+                // FIX TUBERÍAS (IDs 10-13): Conexión sin costuras
+                // ==========================================
+                // ==========================================
+                // FIX TUBERÍAS (Líneas horizontales)
+                // ==========================================
+                // ==========================================
+                // FIX TUBERÍAS: Bordes limpios sin líneas salidas
+                // ==========================================
+                // ID 10: TOPE IZQ
+                if (x < 2 || y < 2 || y > 29) ROM[10][addr] = 4'h1; // Bordes negros absolutos
+                else if (x >= 6 && x <= 12) ROM[10][addr] = 4'h4;
+                else ROM[10][addr] = 4'h3;
+                
+                // ID 11: TOPE DER
+                if (x > 29 || y < 2 || y > 29) ROM[11][addr] = 4'h1; 
+                else if (x >= 20 && x <= 24) ROM[11][addr] = 4'h4;
+                else ROM[11][addr] = 4'h3;
 
-                // =============================================================
-                // ID 10: TUBERÍA TOPE IZQUIERDO
-                // Verde con borde más oscuro arriba y a la izquierda
-                // =============================================================
-                begin
-                    if (y == 0 || y == 1 || y == 2 || y == 3)
-                        ROM[10][addr] = 4'h3;  // borde superior oscuro
-                    else if (x == 0 || x == 1 || x == 2)
-                        ROM[10][addr] = 4'h3;  // borde izquierdo oscuro
-                    else if (y == 4 || y == 5)
-                        ROM[10][addr] = 4'hF;  // brillo
-                    else if (x == 3 && y > 5)
-                        ROM[10][addr] = 4'hF;  // brillo lateral
-                    else
-                        ROM[10][addr] = 4'h4;  // verde interior
-                end
+                // ID 12: CUERPO IZQ
+                if (x < 4) ROM[12][addr] = 4'h0;
+                else if (x == 4 || x == 5) ROM[12][addr] = 4'h1; 
+                else if (x >= 8 && x <= 14) ROM[12][addr] = 4'h4;
+                else ROM[12][addr] = 4'h3;
 
-                // =============================================================
-                // ID 11: TUBERÍA TOPE DERECHO
-                // =============================================================
-                begin
-                    if (y == 0 || y == 1 || y == 2 || y == 3)
-                        ROM[11][addr] = 4'h3;
-                    else if (x == 29 || x == 30 || x == 31)
-                        ROM[11][addr] = 4'h3;
-                    else if (y == 4 || y == 5)
-                        ROM[11][addr] = 4'h4;  // más claro arriba
-                    else
-                        ROM[11][addr] = 4'h4;
-                end
-
-                // =============================================================
-                // ID 12: TUBERÍA CUERPO IZQUIERDO
-                // =============================================================
-                begin
-                    if (x == 0 || x == 1 || x == 2)
-                        ROM[12][addr] = 4'h3;
-                    else if (x == 3 || x == 4)
-                        ROM[12][addr] = 4'hF;  // línea de brillo
-                    else
-                        ROM[12][addr] = 4'h4;
-                end
-
-                // =============================================================
-                // ID 13: TUBERÍA CUERPO DERECHO
-                // =============================================================
-                begin
-                    if (x == 29 || x == 30 || x == 31)
-                        ROM[13][addr] = 4'h3;
-                    else
-                        ROM[13][addr] = 4'h4;
-                end
-
+                // ID 13: CUERPO DER
+                if (x > 27) ROM[13][addr] = 4'h0;
+                else if (x == 26 || x == 27) ROM[13][addr] = 4'h1; 
+                else if (x >= 18 && x <= 22) ROM[13][addr] = 4'h4;
+                else ROM[13][addr] = 4'h3;
                 // =============================================================
                 // ID 32: GOOMBA
                 // Cuerpo marrón redondeado con pies y ojos enojados
@@ -398,74 +347,35 @@ module rom_chunks_mario (
                 end
 
                 // =============================================================
-                // ID 96: NUBE PEQUEÑA (cloud small)
-                // Nube blanca redondeada de 1 tile
+                // NUBES Y ARBUSTOS (Las nubes en Mario son el mismo sprite que 
+                // los arbustos, pero con blanco en lugar de verde)
                 // =============================================================
+                // ID 96: NUBE PEQUEÑA (CS)
                 begin
-                    if (y >= 6 && y <= 18 && x >= 4 && x <= 27) begin
-                        // Forma de nube con lóbulos
-                        if (y <= 10) begin
-                            // Parte superior con lóbulos
-                            if ((x >= 6 && x <= 11 && y >= 6) ||
-                                (x >= 12 && x <= 19 && y >= 4) ||
-                                (x >= 20 && x <= 25 && y >= 7))
-                                ROM[96][addr] = 4'hF;
-                            else
-                                ROM[96][addr] = 4'h0;
-                        end else begin
-                            ROM[96][addr] = 4'hF;
-                        end
-                    end else
-                        ROM[96][addr] = 4'h0;
+                    if (y >= 16 && y <= 28 && x >= 4 && x <= 27) begin
+                        if ((x >= 8 && x <= 23 && y >= 12) || (y >= 20)) ROM[96][addr] = 4'hF; // Blanco
+                        else ROM[96][addr] = 4'h0;
+                    end else ROM[96][addr] = 4'h0;
                 end
 
-                // =============================================================
-                // ID 98: NUBE IZQUIERDA (parte izquierda de nube grande)
-                // =============================================================
-                begin
-                    // Mitad izquierda de nube grande
-                    if (y >= 8 && y <= 22 && x >= 4) begin
-                        if (y <= 14) begin
-                            if (x >= 4 && x <= 14 && y >= 8)
-                                ROM[98][addr] = 4'hF;
-                            else if (x >= 15 && y >= 6)
-                                ROM[98][addr] = 4'hF;
-                            else
-                                ROM[98][addr] = 4'h0;
-                        end else
-                            ROM[98][addr] = 4'hF;
-                    end else
-                        ROM[98][addr] = 4'h0;
-                end
+                // ==========================================
+                // FIX NUBES (IDs 98, 99, 100): Eliminación de artefactos blancos
+                // ==========================================
+                // ID 98: Nube Izquierda
+                if (y >= 8 && y <= 24 && x >= 8) begin
+                    if (y < 12 && x < 16) ROM[98][addr] = 4'h0; 
+                    else ROM[98][addr] = 4'hF; 
+                end else ROM[98][addr] = 4'h0;
 
-                // =============================================================
-                // ID 99: NUBE CENTRO
-                // =============================================================
-                begin
-                    if (y >= 6 && y <= 22)
-                        ROM[99][addr] = 4'hF;
-                    else
-                        ROM[99][addr] = 4'h0;
-                end
+                // ID 99: Nube Centro
+                if (y >= 8 && y <= 24) ROM[99][addr] = 4'hF;
+                else ROM[99][addr] = 4'h0;
 
-                // =============================================================
-                // ID 100: NUBE DERECHA (parte derecha de nube grande)
-                // =============================================================
-                begin
-                    if (y >= 8 && y <= 22 && x <= 27) begin
-                        if (y <= 14) begin
-                            if (x >= 17 && x <= 27 && y >= 8)
-                                ROM[100][addr] = 4'hF;
-                            else if (x < 17 && y >= 6)
-                                ROM[100][addr] = 4'hF;
-                            else
-                                ROM[100][addr] = 4'h0;
-                        end else
-                            ROM[100][addr] = 4'hF;
-                    end else
-                        ROM[100][addr] = 4'h0;
-                end
-
+                // ID 100: Nube Derecha
+                if (y >= 8 && y <= 24 && x <= 23) begin
+                    if (y < 12 && x > 15) ROM[100][addr] = 4'h0; 
+                    else ROM[100][addr] = 4'hF;
+                end else ROM[100][addr] = 4'h0;
                 // =============================================================
                 // ID 101: ARBUSTO IZQUIERDO
                 // =============================================================
@@ -484,14 +394,12 @@ module rom_chunks_mario (
                         ROM[101][addr] = 4'h0;
                 end
 
-                // =============================================================
-                // ID 102: ARBUSTO CENTRO
-                // =============================================================
+                // ID 102: ARBUSTO CENTRO (BsC)
                 begin
-                    if (y >= 12 && y <= 31)
-                        ROM[102][addr] = 4'h4;
-                    else
-                        ROM[102][addr] = 4'h0;
+                    if (y >= 16 && y <= 31) begin
+                        if ((x >= 4 && x <= 27 && y >= 12) || (y >= 20)) ROM[102][addr] = 4'h4; // Verde claro
+                        else ROM[102][addr] = 4'h0;
+                    end else ROM[102][addr] = 4'h0;
                 end
 
                 // =============================================================
@@ -511,6 +419,48 @@ module rom_chunks_mario (
                     end else
                         ROM[103][addr] = 4'h0;
                 end
+
+                // ==========================================
+                // NUEVOS CHUNKS: COLINAS Y CASTILLO
+                // ==========================================
+                // ID 104: Colina (HL) - Forma de pirámide verde
+                if (y >= 31 - x && y >= x && y >= 16) ROM[104][addr] = 4'h4;
+                else ROM[104][addr] = 4'h0;
+
+                // ID 105: Puerta de Castillo Arriba (C_DT)
+                if (x >= 8 && x <= 23 && y >= 16) ROM[105][addr] = 4'h1; // Negro
+                else if (y == 0 || x == 0) ROM[105][addr] = 4'h1;
+                else ROM[105][addr] = 4'h8; // Ladrillo gris
+
+                // ID 106: Puerta de Castillo Abajo (C_DB)
+                if (x >= 8 && x <= 23) ROM[106][addr] = 4'h1;
+                else if (y == 0 || x == 0) ROM[106][addr] = 4'h1;
+                else ROM[106][addr] = 4'h8;
+
+                // ID 107: Ventana de Castillo (C_WN)
+                if (x >= 12 && x <= 19 && y >= 8 && y <= 23) ROM[107][addr] = 4'h1;
+                else if (y == 0 || x == 0) ROM[107][addr] = 4'h1;
+                else ROM[107][addr] = 4'h8;
+
+                // ==========================================
+                // NUEVOS CHUNKS: ARBUSTOS OSCUROS / COLINAS (IDs 112-114)
+                // ==========================================
+                
+                // ID 112: Arbusto Oscuro Izquierdo (DBL)
+                if (y >= 8 && x >= 8) begin
+                    if (y < 12 && x < 16) ROM[112][addr] = 4'h0; // Corte circular
+                    else ROM[112][addr] = 4'h3; // Color Verde Oscuro
+                end else ROM[112][addr] = 4'h0;
+
+                // ID 113: Arbusto Oscuro Centro (DBC)
+                if (y >= 8) ROM[113][addr] = 4'h3;
+                else ROM[113][addr] = 4'h0;
+
+                // ID 114: Arbusto Oscuro Derecho (DBR)
+                if (y >= 8 && x <= 23) begin
+                    if (y < 12 && x > 15) ROM[114][addr] = 4'h0; // Corte circular
+                    else ROM[114][addr] = 4'h3; // Color Verde Oscuro
+                end else ROM[114][addr] = 4'h0;
 
                 // =============================================================
                 // ID 128: MARIO PEQUEÑO (sprite principal)
@@ -591,6 +541,40 @@ module rom_chunks_mario (
                     end else
                         ROM[104][addr] = 4'h0;
                 end
+
+                // ID 105: PUERTA ARRIBA (C_DT)
+                ROM[105][addr] = ROM[5][addr];
+                if (x >= 8 && x <= 23 && y >= 8) begin
+                    if (y < 16 && (x < 12 || x > 19)) ROM[105][addr] = 4'hB; 
+                    else ROM[105][addr] = 4'h1; // Interior Negro
+                end
+
+                // ID 106: PUERTA ABAJO (C_DB)
+                ROM[106][addr] = ROM[5][addr];
+                if (x >= 8 && x <= 23) ROM[106][addr] = 4'h1;
+
+                // ID 107: VENTANA (C_WN)
+                ROM[107][addr] = ROM[5][addr];
+                if (x >= 12 && x <= 19 && y >= 8 && y <= 23) ROM[107][addr] = 4'h1;
+
+                // COLINAS (H_SL, H_SC, H_SR, H_FL)
+                // ID 108: Colina Izquierda
+                if (x == 31 - y) ROM[108][addr] = 4'h1; // Borde diagonal
+                else if (x > 31 - y) ROM[108][addr] = 4'h4; 
+                else ROM[108][addr] = 4'h0;
+
+                // ID 109: Colina Centro
+                if (y == 16) ROM[109][addr] = 4'h1; 
+                else if (y > 16) ROM[109][addr] = 4'h4; 
+                else ROM[109][addr] = 4'h0;
+
+                // ID 110: Colina Derecha
+                if (x == y) ROM[110][addr] = 4'h1; 
+                else if (x < y) ROM[110][addr] = 4'h4; 
+                else ROM[110][addr] = 4'h0;
+
+                // ID 111: Colina Relleno
+                ROM[111][addr] = 4'h4;
 
             end // for x
         end // for y
