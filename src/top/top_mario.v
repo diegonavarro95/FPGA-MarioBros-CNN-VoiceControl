@@ -7,20 +7,46 @@ module top_mario (
     output wire tmds_clk_n,
     output wire [2:0] tmds_data_p,
     output wire [2:0] tmds_data_n,
-    output wire hdmi_txen
+    output wire hdmi_txen,
+    
+    // Puertos físicos del ADAU1761
+    output wire audio_mclk,
+    output wire audio_bclk,
+    output wire audio_lrclk,
+    output wire audio_dac_sdata,
+    inout wire audio_scl,
+    inout wire audio_sda
 );
-    wire pclk, pclk_x5, locked;
+    wire pclk, pclk_x5, pclk_x3, locked;
     wire hsync, vsync, video_on;
     wire [9:0] pixel_x, pixel_y;
 
     wire sys_reset = (~reset_n) | (~locked);
     assign hdmi_txen = 1'b1;
+    
+    // Reloj de audio desde tu MMCM (Configurado a 12.295 MHz)
+    wire clk_12_288m = pclk_x3; 
+    assign audio_mclk = clk_12_288m;
 
     clk_wiz_0 clk_inst (
         .clk_in1(clk_100mhz),
         .clk_out1(pclk),
         .clk_out2(pclk_x5),
+        .clk_out3(pclk_x3),
         .locked(locked)
+    );
+
+    // -------------------------------------------------------------------------
+    // FLUJO DE CONTROL DE AUDIO (I2C)
+    // -------------------------------------------------------------------------
+    wire audio_init_done;
+    
+    audio_config_init audio_init (
+        .clk(pclk),
+        .reset(sys_reset),
+        .scl(audio_scl),
+        .sda(audio_sda),
+        .done(audio_init_done)
     );
 
     vga_sync vga_inst (
@@ -32,6 +58,46 @@ module top_mario (
         .p_tick(),
         .pixel_x(pixel_x),
         .pixel_y(pixel_y)
+    );
+
+    wire [15:0] rom_data_jump, rom_data_coin;
+    wire [15:0] addr_jump, addr_coin;
+    wire [15:0] pcm_mixed;
+    wire next_audio_sample;
+    
+    blk_mem_gen_salto rom_salto_inst (
+        .clka(clk_12_288m),
+        .addra(addr_jump),
+        .douta(rom_data_jump)
+    );
+
+    blk_mem_gen_moneda rom_moneda_inst (
+        .clka(clk_12_288m),
+        .addra(addr_coin),
+        .douta(rom_data_coin)
+    );
+
+    audio_controller dsp_mixer (
+        .clk_12m(clk_12_288m),
+        .reset(sys_reset),
+        .btn_jump(btn_left),  
+        .btn_coin(btn_right),
+        .next_sample(next_audio_sample),
+        .addr_jump(addr_jump),
+        .addr_coin(addr_coin),
+        .data_jump(rom_data_jump),
+        .data_coin(rom_data_coin),
+        .audio_out(pcm_mixed)
+    );
+
+    i2s_master tx_i2s (
+        .clk_12m(clk_12_288m),
+        .reset(sys_reset),
+        .audio_in(audio_init_done ? pcm_mixed : 16'd0),
+        .bclk(audio_bclk),
+        .lrclk(audio_lrclk),
+        .sdata(audio_dac_sdata),
+        .next_sample(next_audio_sample)
     );
 
     reg [7:0] scroll_offset = 8'd0;
@@ -57,10 +123,44 @@ module top_mario (
         end
     end
 
-    wire [4:0] tile_x = pixel_x[9:5];
-    wire [3:0] tile_y = pixel_y[8:5];
-    wire [3:0] chunk_pixel_x = pixel_x[4:1];
-    wire [3:0] chunk_pixel_y = pixel_y[4:1];
+    // =========================================================================
+    // FIX 1: GENERADOR DE COORDENADAS VERDADERAS (Evita bugs de pantalla cortada)
+    // =========================================================================
+    reg [9:0] draw_x = 0;
+    reg [9:0] draw_y = 0;
+    
+    always @(posedge pclk) begin
+        if (sys_reset) begin
+            draw_x <= 0;
+            draw_y <= 0;
+        end else if (video_on) begin
+            if (draw_x == 639) begin
+                draw_x <= 0;
+                if (draw_y == 479) draw_y <= 0;
+                else draw_y <= draw_y + 1;
+            end else begin
+                draw_x <= draw_x + 1;
+            end
+        end else begin
+            draw_x <= 0;
+            if (!vsync) draw_y <= 0;
+        end
+    end
+
+    // =========================================================================
+    // FIX 2 y 3: ESCALADO 32x32 y RETRASO DE PIPELINE
+    // =========================================================================
+    wire [4:0] tile_x = draw_x[9:5];
+    wire [3:0] tile_y = draw_y[8:5];
+
+    // Latencia de 1 ciclo para que los píxeles esperen a la memoria RAM
+    reg [4:0] chunk_pixel_x_delay;
+    reg [4:0] chunk_pixel_y_delay;
+    
+    always @(posedge pclk) begin
+        chunk_pixel_x_delay <= draw_x[4:0]; // Ahora usa 5 bits para 32x32
+        chunk_pixel_y_delay <= draw_y[4:0];
+    end
 
     wire [7:0] chunk_id;
     wire is_solid;
@@ -79,8 +179,8 @@ module top_mario (
     rom_chunks_mario rom_sprites (
         .clk(pclk),
         .chunk_id(chunk_id),
-        .pixel_x(chunk_pixel_x),
-        .pixel_y(chunk_pixel_y),
+        .pixel_x(chunk_pixel_x_delay), // Se inyectan las coordenadas sincronizadas
+        .pixel_y(chunk_pixel_y_delay),
         .pixel_data(pixel_color_index)
     );
 
@@ -101,12 +201,16 @@ module top_mario (
         video_on_delay <= {video_on_delay[0], video_on};
     end
 
+    // =========================================================================
+    // FIX 4: ORDEN DE COLORES RGB CORREGIDO PARA EL PUERTO HDMI
+    // =========================================================================
     rgb2dvi_0 hdmi_tx (
         .TMDS_Clk_p(tmds_clk_p),
         .TMDS_Clk_n(tmds_clk_n),
         .TMDS_Data_p(tmds_data_p),
         .TMDS_Data_n(tmds_data_n),
         .aRst(sys_reset),
+        // Corrección de posiciones: {Rojo, Verde, Azul}
         .vid_pData(video_on_delay[1] ? {rgb_24[23:16], rgb_24[7:0], rgb_24[15:8]} : 24'h000000),
         .vid_pVDE(video_on_delay[1]),
         .vid_pHSync(hsync_delay[1]),

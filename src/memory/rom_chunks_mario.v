@@ -35,7 +35,7 @@ module rom_chunks_mario (
 
     // 256 chunks de 32x32 = 256*1024 bits = 256KB de ROM
     // Vivado los infiere como BRAM automáticamente
-    reg [3:0] ROM [0:255][0:1023];
+    reg [3:0] ROM [0:143][0:1023];
 
     integer id, x, y, addr;
 
@@ -44,7 +44,7 @@ module rom_chunks_mario (
         // =====================================================================
         // PASO 1: Inicializar todo a transparente
         // =====================================================================
-        for (id = 0; id < 256; id = id + 1)
+        for (id = 0; id < 144; id = id + 1)
             for (addr = 0; addr < 1024; addr = addr + 1)
                 ROM[id][addr] = 4'h0;
 
