@@ -1,40 +1,36 @@
 `timescale 1ns / 1ps
 // =============================================================================
-// PALETA_RGB.V
-// Convierte el índice de color de 4 bits de los chunks a RGB de 12 bits (Pmod VGA)
-// Aun se discute si usar VGA o HDMI
-// LATENCIA: combinacional puro (0 ciclos) - sin registros
+// PALETA_RGB.V — Convierte índice de color de 4 bits a RGB 24 bits
+// COMPATIBLE CON top-mario.v (.rgb_24 [23:0])
+// Colores basados en la paleta NES original de Super Mario Bros.
+// LATENCIA: combinacional puro (0 ciclos)
 // =============================================================================
 
 module paleta_rgb (
-    input  wire [3:0] color_index,  // Color de 4 bits de rom_chunks_mario
-    output reg  [3:0] vga_r,        // 4 bits canal Rojo
-    output reg  [3:0] vga_g,        // 4 bits canal Verde
-    output reg  [3:0] vga_b         // 4 bits canal Azul
+    input  wire [3:0]  color_index,
+    output reg  [23:0] rgb_24        // Formato: {R[23:16], G[15:8], B[7:0]}
 );
 
     always @(*) begin
         case (color_index)
-            // FORMATO 12'hRGB extraído de tu paleta NES original de 24 bits
-            4'h0: {vga_r, vga_g, vga_b} = 12'h59F; // Azul cielo (5C, 94, FC)
-            4'h1: {vga_r, vga_g, vga_b} = 12'h000; // Negro      (00, 00, 00)
-            4'h2: {vga_r, vga_g, vga_b} = 12'hBBB; // Gris claro (BC, BC, BC)
-            4'h3: {vga_r, vga_g, vga_b} = 12'h080; // Verde osc. (00, 88, 00)
-            4'h4: {vga_r, vga_g, vga_b} = 12'h0D0; // Verde cla. (00, D8, 00)
-            4'h5: {vga_r, vga_g, vga_b} = 12'h740; // Café osc.  (7C, 4C, 00)
-            4'h6: {vga_r, vga_g, vga_b} = 12'hC90; // Café cla.  (C4, 9C, 00)
-            4'h7: {vga_r, vga_g, vga_b} = 12'hFA4; // Piel       (FC, A0, 44)
-            4'h8: {vga_r, vga_g, vga_b} = 12'h444; // Gris osc.  (44, 44, 44)
-            4'h9: {vga_r, vga_g, vga_b} = 12'h750; // Marrón     (7C, 58, 00)
-            4'hA: {vga_r, vga_g, vga_b} = 12'h0AE; // Azul claro (00, A8, E4)
-            4'hB: {vga_r, vga_g, vga_b} = 12'hE70; // Naranja    (E8, 70, 00)
-            4'hC: {vga_r, vga_g, vga_b} = 12'hE05; // Rojo Mario (E4, 00, 58)
-            4'hD: {vga_r, vga_g, vga_b} = 12'hF7F; // Rosa       (F8, 78, F8)
-            4'hE: {vga_r, vga_g, vga_b} = 12'hFE4; // Amarillo   (FC, E8, 40)
-            4'hF: {vga_r, vga_g, vga_b} = 12'hFFF; // Blanco     (FC, FC, FC)
-            default: {vga_r, vga_g, vga_b} = 12'hF0F; // Magenta de error
+            4'h0: rgb_24 = 24'h5C94FC; // Azul cielo   — transparente -> fondo
+            4'h1: rgb_24 = 24'h000000; // Negro
+            4'h2: rgb_24 = 24'hBCBCBC; // Gris claro
+            4'h3: rgb_24 = 24'h008800; // Verde oscuro  — borde de tuberia
+            4'h4: rgb_24 = 24'h00D800; // Verde claro   — interior tuberia
+            4'h5: rgb_24 = 24'h7C4C00; // Cafe oscuro
+            4'h6: rgb_24 = 24'hC49C00; // Cafe claro    — patron de suelo
+            4'h7: rgb_24 = 24'hFCA044; // Beige/Piel    — cara/manos Mario
+            4'h8: rgb_24 = 24'h444444; // Gris oscuro   — bordes bloques
+            4'h9: rgb_24 = 24'h7C5800; // Cafe/Marron   — goomba, ladrillos
+            4'hA: rgb_24 = 24'h00A8E4; // Azul claro
+            4'hB: rgb_24 = 24'hE87000; // Naranja       — bloque ? borde
+            4'hC: rgb_24 = 24'hE40058; // Rojo          — Mario cuerpo
+            4'hD: rgb_24 = 24'hF878F8; // Rosa
+            4'hE: rgb_24 = 24'hFCE840; // Amarillo      — monedas, bloque ?
+            4'hF: rgb_24 = 24'hFCFCFC; // Blanco        — nubes, signo ?
+            default: rgb_24 = 24'hFF00FF;
         endcase
     end
-
 endmodule
 
