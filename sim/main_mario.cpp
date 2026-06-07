@@ -8,12 +8,15 @@ int main(int argc, char** argv) {
     Vsim_top_mario* top = new Vsim_top_mario;
 
     SDL_Init(SDL_INIT_VIDEO);
-    SDL_Window* window = SDL_CreateWindow("FPGA Super Mario Bros - Nivel 1-1", 
+    SDL_Window* window = SDL_CreateWindow("FPGA Super Mario Bros - Gameplay a 60 FPS", 
                                           SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 
                                           640, 480, 0);
-    SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, 0);
+    SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+    
+    // FIX 1: Crear una textura en VRAM para dibujar todo el frame de golpe
+    SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, 640, 480);
+    Uint32* pixels = new Uint32[640 * 480];
 
-    // Reinicio asíncrono
     top->reset = 1;
     top->clk_25mhz = 0; top->eval();
     top->clk_25mhz = 1; top->eval();
@@ -23,37 +26,37 @@ int main(int argc, char** argv) {
     SDL_Event e;
     bool prev_vsync = true;
 
-    // Estado de los botones de la FPGA
-    top->btn_left = 0;
-    top->btn_right = 0;
+    top->btn_left = 0; top->btn_right = 0;
+    top->btn_jump = 0; top->btn_run = 0;
 
     while (!quit) {
-        // Generar flancos del reloj
         top->clk_25mhz = 1; top->eval();
         top->clk_25mhz = 0; top->eval();
 
-        // Si el hardware indica zona de dibujo, renderizar el píxel
+        // Acumular píxeles en la memoria RAM primero (Extremadamente rápido)
         if (top->video_on_out) {
-            Uint32 rgb = top->rgb_24_out;
-            Uint8 r = (rgb >> 16) & 0xFF;
-            Uint8 g = (rgb >> 8) & 0xFF;
-            Uint8 b = rgb & 0xFF;
-
-            SDL_SetRenderDrawColor(renderer, r, g, b, 255);
-            SDL_RenderDrawPoint(renderer, top->sim_x, top->sim_y);
+            if (top->sim_x < 640 && top->sim_y < 480) {
+                // Formato ARGB: 0xFF000000 fuerza la opacidad completa
+                pixels[top->sim_y * 640 + top->sim_x] = 0xFF000000 | top->rgb_24_out;
+            }
         }
 
-        // Refresco de pantalla al final del frame (VSYNC cae)
+        // Flanco de bajada (Fin del frame)
         if (prev_vsync == 1 && top->vsync == 0) {
+            // Mandar el buffer entero a la tarjeta gráfica y dibujar
+            SDL_UpdateTexture(texture, NULL, pixels, 640 * sizeof(Uint32));
+            SDL_RenderClear(renderer);
+            SDL_RenderCopy(renderer, texture, NULL, NULL);
             SDL_RenderPresent(renderer);
             
-            // Leer teclado para controlar el mapa
             while (SDL_PollEvent(&e)) {
                 if (e.type == SDL_QUIT) quit = true;
                 else if (e.type == SDL_KEYDOWN || e.type == SDL_KEYUP) {
                     bool isPressed = (e.type == SDL_KEYDOWN);
-                    if (e.key.keysym.sym == SDLK_RIGHT) top->btn_right = isPressed;
-                    if (e.key.keysym.sym == SDLK_LEFT)  top->btn_left = isPressed;
+                    if (e.key.keysym.sym == SDLK_d || e.key.keysym.sym == SDLK_RIGHT) top->btn_right = isPressed;
+                    if (e.key.keysym.sym == SDLK_a || e.key.keysym.sym == SDLK_LEFT)  top->btn_left = isPressed;
+                    if (e.key.keysym.sym == SDLK_SPACE) top->btn_jump = isPressed;
+                    if (e.key.keysym.sym == SDLK_LSHIFT) top->btn_run = isPressed;
                 }
             }
         }
@@ -62,6 +65,8 @@ int main(int argc, char** argv) {
 
     top->final();
     delete top;
+    delete[] pixels;
+    SDL_DestroyTexture(texture);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();

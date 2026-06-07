@@ -5,11 +5,18 @@
 
 module ram_escenario (
     input  wire        clk,
+    
+    // Puerto A: Renderizado de Video
     input  wire [4:0]  screen_tile_x,
     input  wire [3:0]  screen_tile_y,
     input  wire [7:0]  scroll_offset,
     output reg  [7:0]  chunk_id,
-    output reg         is_solid
+    output reg         is_solid,
+
+    // Puerto B: Motor de Colisiones
+    input  wire [4:0]  col_tile_x,
+    input  wire [3:0]  col_tile_y,
+    output reg         col_is_solid
 );
 
     localparam MAP_W = 212;
@@ -164,20 +171,37 @@ module ram_escenario (
         MAP[12][208]=DBL; MAP[12][209]=DBC; MAP[12][210]=DBR; 
     end
 
-    reg [7:0] tid;
-    reg [8:0] col_abs_r;
+    // =========================================================================
+    // LECTURA DE DOBLE PUERTO
+    // =========================================================================
+    reg [7:0] tid_A, tid_B;
+    reg [8:0] col_abs_A, col_abs_B;
 
     always @(posedge clk) begin
-        col_abs_r = {1'b0, scroll_offset} + {4'b0, screen_tile_x};
-        if (col_abs_r >= MAP_W || screen_tile_y >= MAP_H) tid <= E;
-        else tid <= MAP[screen_tile_y][col_abs_r[7:0]];
+        // Puerto A (Video)
+        col_abs_A = {1'b0, scroll_offset} + {4'b0, screen_tile_x};
+        if (col_abs_A >= MAP_W || screen_tile_y >= MAP_H) tid_A <= E;
+        else tid_A <= MAP[screen_tile_y][col_abs_A[7:0]];
+
+        // Puerto B (Colisiones de Mario)
+        col_abs_B = {1'b0, scroll_offset} + {4'b0, col_tile_x};
+        if (col_abs_B >= MAP_W || col_tile_y >= MAP_H) tid_B <= E;
+        else tid_B <= MAP[col_tile_y][col_abs_B[7:0]];
     end
 
     always @(*) begin
-        chunk_id = tid;
-        case (tid)
+        chunk_id = tid_A;
+        
+        // Decodificación de solidez para Video
+        case (tid_A)
             BR, QQ, GR, ST, CA, BU, TL, TR, PL, PR, C_DT, C_DB, C_WN, H_SL, H_SC, H_SR, H_FL : is_solid = 1'b1;
             default : is_solid = 1'b0;
+        endcase
+
+        // Decodificación de solidez para Físicas
+        case (tid_B)
+            BR, QQ, GR, ST, CA, BU, TL, TR, PL, PR, C_DT, C_DB, C_WN, H_SL, H_SC, H_SR, H_FL : col_is_solid = 1'b1;
+            default : col_is_solid = 1'b0;
         endcase
     end
 endmodule
