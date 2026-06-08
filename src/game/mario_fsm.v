@@ -43,7 +43,7 @@ module mario_fsm (
     reg vsync_prev;
     wire frame_tick = vsync_prev & ~vsync;
 
-    always @(posedge clk) begin
+    always @(posedge clk or posedge reset) begin
         if (reset) begin
             state         <= S_IDLE; // Iniciar de pie, no cayendo
             mario_x       <= 13'd64; 
