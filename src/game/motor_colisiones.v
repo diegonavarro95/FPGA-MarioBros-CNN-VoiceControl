@@ -11,7 +11,11 @@ module motor_colisiones (
     output reg         on_ground,
     output reg         hit_ceiling,
     output reg         hit_left,
-    output reg         hit_right
+    output reg         hit_right,
+    input  wire [7:0]  tile_chunk_id, // Entra desde el Puerto B de la RAM
+    output reg  [7:0]  hit_ceil_id,
+    output reg  [7:0]  hit_ceil_x,
+    output reg  [3:0]  hit_ceil_y
 );
     // BORDES EXTERNOS GENERALES
     wire [12:0] left_edge   = mario_x + 13'd6;
@@ -41,6 +45,8 @@ module motor_colisiones (
     reg [2:0] phase = 0;
     reg ground_tmp, ceil_tmp, left_tmp, right_tmp;
 
+    
+
     always @(posedge clk) begin
         phase <= phase + 1;
 
@@ -60,8 +66,24 @@ module motor_colisiones (
         case (phase)
             3'd2: ground_tmp <= tile_solid;
             3'd3: ground_tmp <= ground_tmp | tile_solid;
-            3'd4: ceil_tmp   <= tile_solid;
-            3'd5: ceil_tmp   <= ceil_tmp | tile_solid;
+            3'd4: begin 
+                ceil_tmp <= tile_solid;
+                // Si la cabeza izquierda golpea, guardamos la info de ese bloque
+                if (tile_solid) begin
+                    hit_ceil_id <= tile_chunk_id;
+                    hit_ceil_x  <= rel_inner_L + scroll_offset[4:0]; // Coordenada X absoluta
+                    hit_ceil_y  <= row_above;
+                end
+            end
+            3'd5: begin 
+                ceil_tmp <= ceil_tmp | tile_solid;
+                // Si la cabeza derecha golpea (y la izq no), guardamos esa info
+                if (tile_solid && !ceil_tmp) begin
+                    hit_ceil_id <= tile_chunk_id;
+                    hit_ceil_x  <= rel_inner_R + scroll_offset[4:0];
+                    hit_ceil_y  <= row_above;
+                end
+            end
             3'd6: left_tmp   <= tile_solid;
             3'd7: left_tmp   <= left_tmp | tile_solid;
             3'd0: right_tmp  <= tile_solid;

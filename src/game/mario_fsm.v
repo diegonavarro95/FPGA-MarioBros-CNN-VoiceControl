@@ -12,6 +12,18 @@ module mario_fsm (
     input  wire        hit_ceiling,
     input  wire        hit_left,
     input  wire        hit_right_col,
+    
+    // Nuevos puertos del radar de techo y escritura de RAM
+    input  wire [7:0]  hit_ceil_id,
+    input  wire [7:0]  hit_ceil_x,
+    input  wire [3:0]  hit_ceil_y,
+    input  wire        is_super,
+    output reg         map_we,
+    output reg  [7:0]  map_write_x,
+    output reg  [3:0]  map_write_y,
+    output reg  [7:0]  map_write_id,
+    output reg         spawn_mushroom,
+    
     output reg  [12:0] mario_x,
     output reg  [8:0]  mario_y,
     output reg  [7:0]  mario_chunk,
@@ -50,11 +62,17 @@ module mario_fsm (
             mario_dead     <= 1'b0;
             sfx_jump       <= 1'b0;
             delay_timer    <= 8'd0;
+            map_we         <= 1'b0;
+            spawn_mushroom <= 1'b0;
         end else begin
             vsync_prev <= vsync;
             sfx_jump   <= 1'b0;
 
             if (frame_tick) begin
+            
+                // Resetear pulsos de interacción por defecto
+                map_we <= 1'b0;
+                spawn_mushroom <= 1'b0;
 
                 // =========================================================
                 // TRIGGERS GLOBALES (Bloquean el resto de la lógica si se activan)
@@ -64,7 +82,7 @@ module mario_fsm (
                     delay_timer <= 8'd0;
                     mario_dead  <= 1'b1;
                     vel_x       <= 6'sd0;
-                    vel_y       <= 6'sd0; // Detenemos la caída para no desbordar
+                    vel_y       <= 6'sd0; 
                 end 
                 else if (mario_x >= 13'd6336 && state != S_WIN && state != S_DEAD) begin
                     state       <= S_WIN;
@@ -74,7 +92,7 @@ module mario_fsm (
                 end 
                 else begin
                     // =========================================================
-                    // FÍSICAS E INERCIA NORMAL (Solo corre si NO has muerto/ganado)
+                    // FÍSICAS E INERCIA NORMAL
                     // =========================================================
                     if (state != S_DEAD && state != S_WIN) begin
                         if (on_ground) begin
@@ -151,7 +169,26 @@ module mario_fsm (
                                 mario_y <= (mario_y[8:5]) * 32; 
                                 state <= S_IDLE;
                             end
-                            if (hit_ceiling && vel_y < 0) vel_y <= 6'sd0;
+                            
+                            // Lógica de colisión con el techo
+                            if (hit_ceiling && vel_y < 0) begin
+                                vel_y <= 6'sd0; // Corta el salto instantáneamente
+                                
+                                if (hit_ceil_id == 8'h02) begin // Golpeó Caja Pregunta
+                                    map_we <= 1'b1;
+                                    map_write_x <= hit_ceil_x;
+                                    map_write_y <= hit_ceil_y;
+                                    map_write_id <= 8'h0E; // UB (Bloque Usado)
+                                    
+                                    if (hit_ceil_x == 8'd21) spawn_mushroom <= 1'b1;
+                                end 
+                                else if (hit_ceil_id == 8'h01 && is_super) begin // Golpeó Ladrillo siendo Grande
+                                    map_we <= 1'b1;
+                                    map_write_x <= hit_ceil_x;
+                                    map_write_y <= hit_ceil_y;
+                                    map_write_id <= 8'h00; // E (Aire)
+                                end
+                            end
                         end
 
                         S_DEAD: begin
@@ -159,7 +196,6 @@ module mario_fsm (
                             vel_x <= 6'sd0;
                             vel_y <= 6'sd0;
                             
-                            // 180 frames = 3 segundos
                             if (delay_timer < 8'd180) delay_timer <= delay_timer + 8'd1;
                             else begin
                                 state         <= S_IDLE;
@@ -192,7 +228,7 @@ module mario_fsm (
                     endcase
                 end // Fin del if-else maestro
 
-                // 3. CÁMARA (Se detiene si mueres o ganas)
+                // 3. CÁMARA
                 if (state != S_DEAD && state != S_WIN) begin
                     if (mario_x > {scroll_offset, 5'b0} + 13'd320) begin
                         if (scroll_offset < 8'd192) scroll_offset <= scroll_offset + 1;

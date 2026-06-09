@@ -2,28 +2,6 @@
 // =============================================================================
 // ROM_CHUNKS_MARIO.V — Sprites 32x32 para Super Mario Bros FPGA
 // =============================================================================
-//
-// CAMBIO DE RESOLUCIÓN: chunks de 32x32 píxeles (antes 16x16)
-// Con pantalla 640x480 y tile_x=pixel_x[9:5], tile_y=pixel_y[8:5]:
-//   - Cada tile ocupa 32x32 px en pantalla (escala 2:1 del 16x16 del NES)
-// Para usar con los chunks de 32x32 directamente (escala 1:1 en 640px):
-//   - chunk_pixel_x = pixel_x[4:0] (5 bits, 0-31)
-//   - chunk_pixel_y = pixel_y[4:0]
-// NOTA: top-mario.v usa pixel_x[4:1] (4 bits, 0-15) con escalado 2:1.
-//       Ambos modos funcionan. Con 32x32 el modo sin escalado da más detalle.
-//
-// SISTEMA DE COLORES (4 bits, 16 colores):
-//   0=transparente/cielo, 1=negro, 2=gris, 3=verde oscuro, 4=verde claro,
-//   5=cafe oscuro, 6=cafe claro, 7=piel, 8=gris oscuro, 9=marron,
-//   A=azul, B=naranja, C=rojo, D=rosa, E=amarillo, F=blanco
-//
-// ORGANIZACIÓN DE IDs:
-//   0-15  : bloques del escenario y tuberías
-//   32-35 : enemigos
-//   64-67 : ítems y power-ups
-//   96-107: decoraciones (nubes, arbustos, colinas)
-//   128-131: sprites de Mario
-// =============================================================================
 
 module rom_chunks_mario (
     input  wire        clk,
@@ -34,10 +12,10 @@ module rom_chunks_mario (
 );
 
     // 256 chunks de 32x32 = 256*1024 bits = 256KB de ROM
-    // Vivado los infiere como BRAM automáticamente
     reg [3:0] ROM [0:143][0:1023];
 
     integer id, x, y, addr;
+    integer px, py; // Variables para cálculo de sub-bloques
 
     initial begin
 
@@ -57,16 +35,12 @@ module rom_chunks_mario (
 
                 // =============================================================
                 // ID 1: LADRILLO (BRICK BLOCK)
-                // Patrón de ladrillos con juntas horizontales y verticales
                 // =============================================================
                 begin
-                    // Borde exterior oscuro
                     if (x == 0 || x == 31 || y == 0 || y == 31)
                         ROM[1][addr] = 4'h8;
-                    // Junta horizontal cada 8px
                     else if (y == 8 || y == 9 || y == 20 || y == 21)
                         ROM[1][addr] = 4'h8;
-                    // Juntas verticales alternadas (desfasadas entre hileras)
                     else if (y < 9) begin
                         if (x == 16 || x == 17) ROM[1][addr] = 4'h8;
                         else ROM[1][addr] = 4'h9;
@@ -81,27 +55,26 @@ module rom_chunks_mario (
 
                 // =============================================================
                 // ID 2: BLOQUE PREGUNTA (?)
-                // Fondo naranja/amarillo con ? blanca y borde oscuro
                 // =============================================================
                 begin
                     if (x == 0 || x == 31 || y == 0 || y == 31)
                         ROM[2][addr] = 4'hB;
                     else if (x == 1 || x == 30 || y == 1 || y == 30)
                         ROM[2][addr] = 4'hF;
-                    // Dibujo de '?' más detallado (32x32)
                     else if ((y >= 4 && y <= 8) && (x >= 12 && x <= 19))
-                        ROM[2][addr] = 4'hF; // tapa superior del ?
+                        ROM[2][addr] = 4'hF; 
                     else if ((y >= 4 && y <= 11) && (x >= 8 && x <= 11))
-                        ROM[2][addr] = 4'hF; // palo izquierdo superior
+                        ROM[2][addr] = 4'hF; 
                     else if ((y >= 4 && y <= 11) && (x >= 20 && x <= 23))
-                        ROM[2][addr] = 4'hF; // palo derecho superior
+                        ROM[2][addr] = 4'hF; 
                     else if ((y >= 12 && y <= 16) && (x >= 12 && x <= 19))
-                        ROM[2][addr] = 4'hF; // puente del ?
+                        ROM[2][addr] = 4'hF; 
                     else if ((y >= 18 && y <= 22) && (x >= 12 && x <= 19))
-                        ROM[2][addr] = 4'hF; // punto del ?
+                        ROM[2][addr] = 4'hF; 
                     else
                         ROM[2][addr] = 4'hE;
                 end
+                
                 // ==========================================
                 // FIX SUELO (ID 3): Tu diseño restaurado en 32x32
                 // ==========================================
@@ -113,7 +86,6 @@ module rom_chunks_mario (
 
                 // =============================================================
                 // ID 4: ESCALERA (STAIR BLOCK)
-                // Bloque sólido naranja/dorado uniforme
                 // =============================================================
                 begin
                     if (x == 0 || x == 31 || y == 0 || y == 31)
@@ -163,24 +135,15 @@ module rom_chunks_mario (
                 if (x >= 14 && x <= 17) ROM[8][addr] = 4'h4;
                 else ROM[8][addr] = 4'h0;
                 
-                // ==========================================
-                // FIX BANDERA: Anclaje correcto a la derecha
-                // ==========================================
                 // ID 9: BANDERA (FL)
                 if (y >= 4 && y <= 16 && x >= 12 && x <= 31) ROM[9][addr] = 4'h4; 
                 else ROM[9][addr] = 4'h0;
 
                 // ==========================================
-                // FIX TUBERÍAS (IDs 10-13): Conexión sin costuras
-                // ==========================================
-                // ==========================================
-                // FIX TUBERÍAS (Líneas horizontales)
-                // ==========================================
-                // ==========================================
                 // FIX TUBERÍAS: Bordes limpios sin líneas salidas
                 // ==========================================
                 // ID 10: TOPE IZQ
-                if (x < 2 || y < 2 || y > 29) ROM[10][addr] = 4'h1; // Bordes negros absolutos
+                if (x < 2 || y < 2 || y > 29) ROM[10][addr] = 4'h1; 
                 else if (x >= 6 && x <= 12) ROM[10][addr] = 4'h4;
                 else ROM[10][addr] = 4'h3;
                 
@@ -200,23 +163,59 @@ module rom_chunks_mario (
                 else if (x == 26 || x == 27) ROM[13][addr] = 4'h1; 
                 else if (x >= 18 && x <= 22) ROM[13][addr] = 4'h4;
                 else ROM[13][addr] = 4'h3;
+
                 // =============================================================
-                // ID 32: GOOMBA
-                // Cuerpo marrón redondeado con pies y ojos enojados
+                // ID 14: BLOQUE USADO / CAJA VACÍA (NUEVO)
+                // Bloque marrón con 4 remaches en las esquinas
                 // =============================================================
                 begin
-                    // Cuerpo principal (óvalo)
+                    if (x == 0 || x == 31 || y == 0 || y == 31)
+                        ROM[14][addr] = 4'h8; // Borde oscuro
+                    else if ((x>=4 && x<=7 && y>=4 && y<=7) || (x>=24 && x<=27 && y>=4 && y<=7) ||
+                             (x>=4 && x<=7 && y>=24 && y<=27) || (x>=24 && x<=27 && y>=24 && y<=27))
+                        ROM[14][addr] = 4'h1; // Remaches negros en las 4 esquinas
+                    else
+                        ROM[14][addr] = 4'h9; // Fondo marrón
+                end
+
+                // =============================================================
+                // ID 16: CHAMPIÑÓN ROJO (NUEVO)
+                // Diseño de 32x32 escalando un grid visual de 16x16
+                // =============================================================
+                begin
+                    px = x / 2; // Extraemos sub-coordenadas de 16x16
+                    py = y / 2;
+
+                    if (py == 0 || py >= 15) ROM[16][addr] = 4'h0;
+                    else if (py == 1) ROM[16][addr] = (px>=5 && px<=10) ? 4'h1 : 4'h0;
+                    else if (py == 2) ROM[16][addr] = (px>=4 && px<=11) ? ((px>=5&&px<=10)?4'hC:4'h1) : 4'h0;
+                    else if (py == 3) ROM[16][addr] = (px>=3 && px<=12) ? ((px>=4&&px<=11)?4'hC:4'h1) : 4'h0;
+                    else if (py == 4) ROM[16][addr] = (px>=2 && px<=13) ? ((px==2||px==13)?4'h1:((px>=4&&px<=5)||(px>=10&&px<=11)?4'hF:4'hC)) : 4'h0;
+                    else if (py == 5) ROM[16][addr] = (px>=1 && px<=14) ? ((px==1||px==14)?4'h1:((px>=3&&px<=6)||(px>=9&&px<=12)?4'hF:4'hC)) : 4'h0;
+                    else if (py == 6) ROM[16][addr] = (px>=1 && px<=14) ? ((px==1||px==14)?4'h1:((px>=3&&px<=6)||(px>=9&&px<=12)?4'hF:4'hC)) : 4'h0;
+                    else if (py == 7) ROM[16][addr] = (px>=1 && px<=14) ? ((px==1||px==14)?4'h1:((px>=4&&px<=5)||(px>=10&&px<=11)?4'hF:4'hC)) : 4'h0;
+                    else if (py == 8) ROM[16][addr] = (px>=1 && px<=14) ? ((px==1||px==14)?4'h1:4'hC) : 4'h0;
+                    else if (py == 9) ROM[16][addr] = (px>=1 && px<=14) ? 4'h1 : 4'h0; // Borde interior de la cabeza
+                    else if (py == 10) ROM[16][addr] = (px>=3 && px<=12) ? 4'h1 : 4'h0;
+                    else if (py == 11) ROM[16][addr] = (px>=4 && px<=11) ? ((px==4||px==11)?4'h1:4'h7) : 4'h0; 
+                    else if (py == 12) ROM[16][addr] = (px>=4 && px<=11) ? ((px==4||px==11)?4'h1:((px==5||px==10)?4'h1:4'h7)) : 4'h0; // Ojos
+                    else if (py == 13) ROM[16][addr] = (px>=4 && px<=11) ? ((px==4||px==11)?4'h1:((px==5||px==10)?4'h1:4'h7)) : 4'h0; // Ojos
+                    else if (py == 14) ROM[16][addr] = (px>=4 && px<=11) ? 4'h1 : 4'h0; // Base
+                    else ROM[16][addr] = 4'h0;
+                end
+
+
+                // =============================================================
+                // ID 32: GOOMBA
+                // =============================================================
+                begin
                     if (y >= 6 && y <= 22 && x >= 4 && x <= 27) begin
-                        // Borde oscuro
                         if (y == 6 || y == 22 || x == 4 || x == 27)
                             ROM[32][addr] = 4'h1;
-                        // Ceja izquierda enojada
                         else if (y >= 9 && y <= 12 && x >= 6 && x <= 12 && (y - 9) > (x - 6)/2)
                             ROM[32][addr] = 4'h1;
-                        // Ceja derecha enojada (espejo)
                         else if (y >= 9 && y <= 12 && x >= 19 && x <= 25 && (y - 9) > (25 - x)/2)
                             ROM[32][addr] = 4'h1;
-                        // Ojos (blanco + pupila)
                         else if (y >= 10 && y <= 14 && x >= 7 && x <= 11)
                             ROM[32][addr] = (y >= 11 && y <= 13 && x >= 8 && x <= 10) ? 4'hF : 4'h9;
                         else if (y >= 10 && y <= 14 && x >= 20 && x <= 24)
@@ -224,7 +223,6 @@ module rom_chunks_mario (
                         else
                             ROM[32][addr] = 4'h9;
                     end
-                    // Pies (dos cuadrados bajos)
                     else if (y >= 23 && y <= 27 && ((x >= 4 && x <= 12) || (x >= 19 && x <= 27)))
                         ROM[32][addr] = (x == 4 || x == 12 || x == 19 || x == 27 || y == 27) ? 4'h1 : 4'h9;
                     else
@@ -233,10 +231,8 @@ module rom_chunks_mario (
 
                 // =============================================================
                 // ID 33: KOOPA TROOPA
-                // Tortuga verde con caparazón
                 // =============================================================
                 begin
-                    // Caparazón (óvalo verde)
                     if (y >= 4 && y <= 20 && x >= 5 && x <= 26) begin
                         if (y == 4 || y == 20 || x == 5 || x == 26)
                             ROM[33][addr] = 4'h1;
@@ -245,10 +241,8 @@ module rom_chunks_mario (
                         else
                             ROM[33][addr] = 4'h4;
                     end
-                    // Cabeza pequeña arriba
                     else if (y >= 1 && y <= 4 && x >= 18 && x <= 25)
                         ROM[33][addr] = (y == 1 || x == 25) ? 4'h1 : 4'hE;
-                    // Patas
                     else if (y >= 21 && y <= 26 && ((x >= 6 && x <= 11) || (x >= 20 && x <= 25)))
                         ROM[33][addr] = 4'h4;
                     else
@@ -257,7 +251,6 @@ module rom_chunks_mario (
 
                 // =============================================================
                 // ID 34: GOOMBA APLASTADO
-                // Solo la parte baja del goomba
                 // =============================================================
                 begin
                     if (y >= 20 && y <= 28 && x >= 3 && x <= 28)
@@ -268,15 +261,11 @@ module rom_chunks_mario (
 
                 // =============================================================
                 // ID 64: MONEDA
-                // Círculo dorado brillante
                 // =============================================================
                 begin
-                    // Círculo centrado
                     if (y >= 6 && y <= 25 && x >= 9 && x <= 22) begin
-                        // Borde exterior
                         if (y == 6 || y == 25 || x == 9 || x == 22)
                             ROM[64][addr] = 4'hB;
-                        // Brillo interior izquierdo
                         else if (x >= 11 && x <= 13 && y >= 8 && y <= 12)
                             ROM[64][addr] = 4'hF;
                         else
@@ -286,20 +275,16 @@ module rom_chunks_mario (
                 end
 
                 // =============================================================
-                // ID 65: HONGO ROJO (power-up)
+                // ID 65: HONGO ROJO (power-up viejo del array)
                 // =============================================================
                 begin
-                    // Pie del hongo (beige)
                     if (y >= 18 && y <= 28 && x >= 9 && x <= 22)
                         ROM[65][addr] = (y == 18 || y == 28 || x == 9 || x == 22) ? 4'h1 : 4'h7;
-                    // Sombrero (rojo con puntos blancos)
                     else if (y >= 4 && y <= 18 && x >= 2 && x <= 29) begin
-                        // Arco del sombrero
                         if ((x >= 2 && x <= 5) || (x >= 26 && x <= 29))
                             ROM[65][addr] = (y > 12) ? 4'h0 : 4'hC;
                         else if (y == 4 && (x < 8 || x > 23))
                             ROM[65][addr] = 4'h0;
-                        // Puntos blancos
                         else if ((y >= 8 && y <= 12 && x >= 6 && x <= 10) ||
                                  (y >= 8 && y <= 12 && x >= 21 && x <= 25))
                             ROM[65][addr] = 4'hF;
@@ -313,10 +298,8 @@ module rom_chunks_mario (
                 // ID 66: FLOR DE FUEGO
                 // =============================================================
                 begin
-                    // Tallo
                     if (x >= 14 && x <= 17 && y >= 16 && y <= 31)
                         ROM[66][addr] = 4'h4;
-                    // Pétalos rojos
                     else if (y >= 4 && y <= 18) begin
                         if ((y >= 4 && y <= 8 && x >= 12 && x <= 19) ||
                             (y >= 8 && y <= 12 && x >= 6 && x <= 25) ||
@@ -330,13 +313,10 @@ module rom_chunks_mario (
 
                 // =============================================================
                 // ID 67: ESTRELLA
-                // Estrella amarilla de 5 puntas simplificada
                 // =============================================================
                 begin
-                    // Cruz central
                     if ((x >= 12 && x <= 19) || (y >= 12 && y <= 19))
                         ROM[67][addr] = 4'hE;
-                    // Diagonales a 45°
                     else if ((x >= 6 && x <= 10 && y >= 6 && y <= 10 && (x - 6) == (y - 6)) ||
                              (x >= 21 && x <= 25 && y >= 6 && y <= 10 && (x - 21) == (10 - y)) ||
                              (x >= 6 && x <= 10 && y >= 21 && y <= 25 && (x - 6) == (25 - y)) ||
@@ -347,35 +327,31 @@ module rom_chunks_mario (
                 end
 
                 // =============================================================
-                // NUBES Y ARBUSTOS (Las nubes en Mario son el mismo sprite que 
-                // los arbustos, pero con blanco en lugar de verde)
-                // =============================================================
                 // ID 96: NUBE PEQUEÑA (CS)
+                // =============================================================
                 begin
                     if (y >= 16 && y <= 28 && x >= 4 && x <= 27) begin
-                        if ((x >= 8 && x <= 23 && y >= 12) || (y >= 20)) ROM[96][addr] = 4'hF; // Blanco
+                        if ((x >= 8 && x <= 23 && y >= 12) || (y >= 20)) ROM[96][addr] = 4'hF; 
                         else ROM[96][addr] = 4'h0;
                     end else ROM[96][addr] = 4'h0;
                 end
 
                 // ==========================================
-                // FIX NUBES (IDs 98, 99, 100): Eliminación de artefactos blancos
+                // FIX NUBES (IDs 98, 99, 100)
                 // ==========================================
-                // ID 98: Nube Izquierda
                 if (y >= 8 && y <= 24 && x >= 8) begin
                     if (y < 12 && x < 16) ROM[98][addr] = 4'h0; 
                     else ROM[98][addr] = 4'hF; 
                 end else ROM[98][addr] = 4'h0;
 
-                // ID 99: Nube Centro
                 if (y >= 8 && y <= 24) ROM[99][addr] = 4'hF;
                 else ROM[99][addr] = 4'h0;
 
-                // ID 100: Nube Derecha
                 if (y >= 8 && y <= 24 && x <= 23) begin
                     if (y < 12 && x > 15) ROM[100][addr] = 4'h0; 
                     else ROM[100][addr] = 4'hF;
                 end else ROM[100][addr] = 4'h0;
+
                 // =============================================================
                 // ID 101: ARBUSTO IZQUIERDO
                 // =============================================================
@@ -394,10 +370,10 @@ module rom_chunks_mario (
                         ROM[101][addr] = 4'h0;
                 end
 
-                // ID 102: ARBUSTO CENTRO (BsC)
+                // ID 102: ARBUSTO CENTRO
                 begin
                     if (y >= 16 && y <= 31) begin
-                        if ((x >= 4 && x <= 27 && y >= 12) || (y >= 20)) ROM[102][addr] = 4'h4; // Verde claro
+                        if ((x >= 4 && x <= 27 && y >= 12) || (y >= 20)) ROM[102][addr] = 4'h4;
                         else ROM[102][addr] = 4'h0;
                     end else ROM[102][addr] = 4'h0;
                 end
@@ -423,74 +399,58 @@ module rom_chunks_mario (
                 // ==========================================
                 // NUEVOS CHUNKS: COLINAS Y CASTILLO
                 // ==========================================
-                // ID 104: Colina (HL) - Forma de pirámide verde
                 if (y >= 31 - x && y >= x && y >= 16) ROM[104][addr] = 4'h4;
                 else ROM[104][addr] = 4'h0;
 
-                // ID 105: Puerta de Castillo Arriba (C_DT)
-                if (x >= 8 && x <= 23 && y >= 16) ROM[105][addr] = 4'h1; // Negro
-                else if (y == 0 || x == 0) ROM[105][addr] = 4'h1;
-                else ROM[105][addr] = 4'h8; // Ladrillo gris
+                ROM[105][addr] = ROM[5][addr];
+                if (x >= 8 && x <= 23 && y >= 8) begin
+                    if (y < 16 && (x < 12 || x > 19)) ROM[105][addr] = 4'hB; 
+                    else ROM[105][addr] = 4'h1;
+                end
 
-                // ID 106: Puerta de Castillo Abajo (C_DB)
+                ROM[106][addr] = ROM[5][addr];
                 if (x >= 8 && x <= 23) ROM[106][addr] = 4'h1;
-                else if (y == 0 || x == 0) ROM[106][addr] = 4'h1;
-                else ROM[106][addr] = 4'h8;
 
-                // ID 107: Ventana de Castillo (C_WN)
+                ROM[107][addr] = ROM[5][addr];
                 if (x >= 12 && x <= 19 && y >= 8 && y <= 23) ROM[107][addr] = 4'h1;
-                else if (y == 0 || x == 0) ROM[107][addr] = 4'h1;
-                else ROM[107][addr] = 4'h8;
 
                 // ==========================================
-                // NUEVOS CHUNKS: ARBUSTOS OSCUROS / COLINAS (IDs 112-114)
+                // NUEVOS CHUNKS: ARBUSTOS OSCUROS / COLINAS
                 // ==========================================
-                
-                // ID 112: Arbusto Oscuro Izquierdo (DBL)
                 if (y >= 8 && x >= 8) begin
-                    if (y < 12 && x < 16) ROM[112][addr] = 4'h0; // Corte circular
-                    else ROM[112][addr] = 4'h3; // Color Verde Oscuro
+                    if (y < 12 && x < 16) ROM[112][addr] = 4'h0; 
+                    else ROM[112][addr] = 4'h3; 
                 end else ROM[112][addr] = 4'h0;
 
-                // ID 113: Arbusto Oscuro Centro (DBC)
                 if (y >= 8) ROM[113][addr] = 4'h3;
                 else ROM[113][addr] = 4'h0;
 
-                // ID 114: Arbusto Oscuro Derecho (DBR)
                 if (y >= 8 && x <= 23) begin
-                    if (y < 12 && x > 15) ROM[114][addr] = 4'h0; // Corte circular
-                    else ROM[114][addr] = 4'h3; // Color Verde Oscuro
+                    if (y < 12 && x > 15) ROM[114][addr] = 4'h0; 
+                    else ROM[114][addr] = 4'h3; 
                 end else ROM[114][addr] = 4'h0;
 
                 // =============================================================
-                // ID 128: MARIO PEQUEÑO (sprite principal)
-                // Sombrero rojo, cara piel, ropa roja, zapatos marrones
+                // ID 128: MARIO PEQUEÑO
                 // =============================================================
                 begin
-                    // Sombrero (rojo)
                     if (y >= 2 && y <= 7 && x >= 8 && x <= 23)
                         ROM[128][addr] = (y == 2 && (x < 10 || x > 21)) ? 4'h0 : 4'hC;
-                    // Cara (piel)
                     else if (y >= 8 && y <= 13 && x >= 6 && x <= 25) begin
-                        // Ojos
                         if (y >= 9 && y <= 11 && x >= 9 && x <= 11) ROM[128][addr] = 4'h1;
                         else if (y >= 9 && y <= 11 && x >= 19 && x <= 21) ROM[128][addr] = 4'h1;
-                        // Bigote
                         else if (y == 13 && x >= 9 && x <= 22) ROM[128][addr] = 4'h1;
                         else ROM[128][addr] = 4'h7;
                     end
-                    // Overol (rojo)
                     else if (y >= 14 && y <= 22 && x >= 5 && x <= 26) begin
                         if (y >= 18 && (x < 9 || x > 22)) ROM[128][addr] = 4'hC;
                         else ROM[128][addr] = 4'hC;
                     end
-                    // Piernas (azul/rojo alternado)
                     else if (y >= 23 && y <= 27) begin
                         if (x >= 5 && x <= 13) ROM[128][addr] = 4'hC;
                         else if (x >= 18 && x <= 26) ROM[128][addr] = 4'hC;
                         else ROM[128][addr] = 4'h0;
                     end
-                    // Zapatos
                     else if (y >= 28 && y <= 30) begin
                         if ((x >= 4 && x <= 14) || (x >= 17 && x <= 27))
                             ROM[128][addr] = 4'h9;
@@ -503,22 +463,16 @@ module rom_chunks_mario (
 
                 // =============================================================
                 // ID 131: MARIO SALTANDO
-                // Brazos extendidos
                 // =============================================================
                 begin
-                    // Sombrero
                     if (y >= 2 && y <= 7 && x >= 8 && x <= 23)
                         ROM[131][addr] = (y == 2 && (x < 10 || x > 21)) ? 4'h0 : 4'hC;
-                    // Brazos extendidos horizontalmente
                     else if (y >= 10 && y <= 14 && ((x >= 1 && x <= 5) || (x >= 26 && x <= 30)))
                         ROM[131][addr] = 4'h7;
-                    // Cara
                     else if (y >= 8 && y <= 13 && x >= 6 && x <= 25)
                         ROM[131][addr] = 4'h7;
-                    // Cuerpo
                     else if (y >= 14 && y <= 22 && x >= 5 && x <= 26)
                         ROM[131][addr] = 4'hC;
-                    // Piernas juntas (saltando)
                     else if (y >= 23 && y <= 30 && x >= 8 && x <= 23)
                         ROM[131][addr] = (y >= 28) ? 4'h9 : 4'hC;
                     else
@@ -526,54 +480,20 @@ module rom_chunks_mario (
                 end
 
                 // =============================================================
-                // ID 104: COLINA PEQUEÑA
+                // ID 108-111: COLINAS Y RELLENO
                 // =============================================================
-                begin
-                    if (y >= 16 && y <= 31) begin
-                        if (x >= 2 && x <= 29) ROM[104][addr] = 4'h4;
-                        else ROM[104][addr] = 4'h0;
-                    end else if (y >= 10 && y < 16) begin
-                        if (x >= 6 && x <= 25) ROM[104][addr] = 4'h4;
-                        else ROM[104][addr] = 4'h0;
-                    end else if (y >= 4 && y < 10) begin
-                        if (x >= 12 && x <= 19) ROM[104][addr] = 4'h4;
-                        else ROM[104][addr] = 4'h0;
-                    end else
-                        ROM[104][addr] = 4'h0;
-                end
-
-                // ID 105: PUERTA ARRIBA (C_DT)
-                ROM[105][addr] = ROM[5][addr];
-                if (x >= 8 && x <= 23 && y >= 8) begin
-                    if (y < 16 && (x < 12 || x > 19)) ROM[105][addr] = 4'hB; 
-                    else ROM[105][addr] = 4'h1; // Interior Negro
-                end
-
-                // ID 106: PUERTA ABAJO (C_DB)
-                ROM[106][addr] = ROM[5][addr];
-                if (x >= 8 && x <= 23) ROM[106][addr] = 4'h1;
-
-                // ID 107: VENTANA (C_WN)
-                ROM[107][addr] = ROM[5][addr];
-                if (x >= 12 && x <= 19 && y >= 8 && y <= 23) ROM[107][addr] = 4'h1;
-
-                // COLINAS (H_SL, H_SC, H_SR, H_FL)
-                // ID 108: Colina Izquierda
-                if (x == 31 - y) ROM[108][addr] = 4'h1; // Borde diagonal
+                if (x == 31 - y) ROM[108][addr] = 4'h1; 
                 else if (x > 31 - y) ROM[108][addr] = 4'h4; 
                 else ROM[108][addr] = 4'h0;
 
-                // ID 109: Colina Centro
                 if (y == 16) ROM[109][addr] = 4'h1; 
                 else if (y > 16) ROM[109][addr] = 4'h4; 
                 else ROM[109][addr] = 4'h0;
 
-                // ID 110: Colina Derecha
                 if (x == y) ROM[110][addr] = 4'h1; 
                 else if (x < y) ROM[110][addr] = 4'h4; 
                 else ROM[110][addr] = 4'h0;
 
-                // ID 111: Colina Relleno
                 ROM[111][addr] = 4'h4;
 
             end // for x
@@ -582,7 +502,6 @@ module rom_chunks_mario (
 
     // =========================================================================
     // LECTURA SÍNCRONA — 1 ciclo de latencia
-    // addr_pixel = pixel_y * 32 + pixel_x  (en hardware: concatenar bits)
     // =========================================================================
     wire [9:0] addr_pixel = {pixel_y, pixel_x};
 
