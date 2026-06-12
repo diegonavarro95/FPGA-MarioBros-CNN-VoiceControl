@@ -20,8 +20,7 @@ MAPA_COMANDOS = {
     'right',  'right';
     'up',     'up';
     'down',   'down';
-    'jump',   'go';     % Equivalencia por espectro corto/energico
-    'action', 'yes';    % Equivalencia arbitraria
+    'action', 'yes';
     'pause',  'stop';   % Equivalencia por intención
 };
 
@@ -231,3 +230,4 @@ for c = 1:n_clases
     colorbar;
 end
 sgtitle('Mapa de características acústicas (MFCC) por clase');
+
